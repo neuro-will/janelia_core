@@ -46,7 +46,7 @@ def comb_movies(movie_paths: Sequence[pathlib.Path], save_path: pathlib.Path,
 
     clips = [editor.VideoFileClip(movie_path) for movie_path in movie_paths]
     final_clip = editor.clips_array([clips])
-    final_clip.write_videofile(save_path)
+    final_clip.write_videofile(str(save_path))
 
 
 def make_rgb_three_ch_z_plane_movie(z_imgs, save_path: str, fps: int = 10,

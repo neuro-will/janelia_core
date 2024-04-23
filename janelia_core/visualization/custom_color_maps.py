@@ -59,7 +59,7 @@ class MultiParamCMap():
 
         inds = [np.round((vls - start)/step) for vls, (start, stop, step) in zip(param_vls, self.param_vl_ranges)]
         inds = [np.minimum(np.maximum(inds_i, 0), n_p_vls_i-1) for inds_i, n_p_vls_i in zip(inds, self.n_param_vls)]
-        inds = [inds_i.astype(np.int) for inds_i in inds]
+        inds = [inds_i.astype(int) for inds_i in inds]
         inds.append(slice(0, 3))
         inds = tuple(inds)
         return self.clrs[inds]

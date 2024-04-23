@@ -472,7 +472,7 @@ def l_th(a: np.ndarray, t: np.ndarray) -> np.ndarray:
     return a
 
 
-def nan_matrix(shape: Sequence[int], dtype=np.float):
+def nan_matrix(shape: Sequence[int], dtype=float):
     """ Generates a matrix of a given shape and data type initialized to nan values.
 
     Args:
