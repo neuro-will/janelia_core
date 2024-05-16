@@ -181,11 +181,11 @@ def percentile_filter_multi_d(data: np.ndarray, window_length: int, filter_start
     n_dims = len(one_tm_point_shape)
 
     # Reshape array - we will need this when putting filtered data back into array
-    reshape_array = np.ones(n_dims+1, dtype=np.int)
+    reshape_array = np.ones(n_dims+1, dtype=int)
     reshape_array[0] = n_tm_pts
 
     if mask is None:
-        mask = np.ones(one_tm_point_shape, dtype=np.bool)
+        mask = np.ones(one_tm_point_shape, dtype=bool)
 
     # Get coordinates for each point we need to calculate percentiles for
     one_tm_point_inds = [range(s) for s in one_tm_point_shape]
