@@ -76,7 +76,7 @@ def down_sample_ephys_vls(ts: np.ndarray, image_acq_starts: np.ndarray, n_images
         if image_acq_starts[-1] > ts[-1]:
             raise (ValueError('Last image acquisition start falls after time stamps for values.'))
 
-        bool_image_acq_starts = np.zeros_like(ts, dtype=np.bool)
+        bool_image_acq_starts = np.zeros_like(ts, dtype=bool)
 
         for img_start in image_acq_starts:
             start_ind = np.argwhere(ts - img_start >= 0)[0][0]

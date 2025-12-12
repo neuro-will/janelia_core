@@ -1139,7 +1139,7 @@ class SumOfTiledHyperCubeBasisFcns(torch.nn.Module):
         # Determine the order of dimensions for the purposes of linearalization - we want the dimension
         # which will have the most active bump functions for a given point to be last.  This will allow us
         # to specify the largest contiguous chunks of the array holding bump function magnitudes.
-        n_div_per_hc_side_per_dim  = np.asarray(n_div_per_hc_side_per_dim, dtype=np.long)
+        n_div_per_hc_side_per_dim  = np.asarray(n_div_per_hc_side_per_dim, dtype=np.intc)
         dim_order = np.argsort(n_div_per_hc_side_per_dim)
         self.register_buffer('dim_order', torch.Tensor(dim_order).long())
 
@@ -1153,7 +1153,7 @@ class SumOfTiledHyperCubeBasisFcns(torch.nn.Module):
         n_div_per_hc_side_per_dim = n_div_per_hc_side_per_dim[dim_order]
 
         # Pre-calculate factors we need for linearalization - saved in order according to dim_order
-        dim_factors = np.ones(n_dims, dtype=np.long)
+        dim_factors = np.ones(n_dims, dtype=np.intc)
         for d_i in range(n_dims-2, -1, -1):
             dim_factors[d_i] = dim_factors[d_i + 1]*n_bump_fcns_per_dim[d_i + 1]
         self.register_buffer('dim_factors', torch.Tensor(dim_factors).long())

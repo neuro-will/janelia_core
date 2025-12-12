@@ -52,7 +52,7 @@ def combine_slices(slices: Sequence[slice]) -> Sequence[slice]:
 
     shifted_slices = [slice(s.start-min_start, s.stop-min_start) for s in slices]
 
-    bin_array = np.zeros(max_stop-min_start, dtype=np.bool)
+    bin_array = np.zeros(max_stop-min_start, dtype=bool)
     for s in shifted_slices:
         bin_array[s] = True
 
@@ -243,7 +243,7 @@ def find_disjoint_intervals(ints: np.ndarray) -> np.ndarray:
             return False
 
     n_ints = ints.shape[0]
-    disjoint_ints = np.ones(n_ints, dtype=np.bool)
+    disjoint_ints = np.ones(n_ints, dtype=bool)
     for check_i in range(n_ints):
         if disjoint_ints[check_i] == True:  # No need to check this interval if we know it overlaps with something else
 

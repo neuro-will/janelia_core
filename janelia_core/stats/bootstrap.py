@@ -32,10 +32,10 @@ class OnlineNonZeroPVlCalculator():
         """
 
         self.n_vars = n_vars
-        self.lt0 = np.zeros(n_vars, dtype=np.bool) # Array to keep track of if we've seen values less than 0
-        self.gt0 = np.zeros(n_vars, dtype=np.bool) # Array to keep track of if we've seen values greater than 0
-        self.nlt0 = np.zeros(n_vars, dtype=np.long) # Array to count how many values are less than 0
-        self.ngt0 = np.zeros(n_vars, dtype=np.long) # Array to count how many values are greater than 0
+        self.lt0 = np.zeros(n_vars, dtype=bool) # Array to keep track of if we've seen values less than 0
+        self.gt0 = np.zeros(n_vars, dtype=bool) # Array to keep track of if we've seen values greater than 0
+        self.nlt0 = np.zeros(n_vars, dtype=np.longlong) # Array to count how many values are less than 0
+        self.ngt0 = np.zeros(n_vars, dtype=np.longlong) # Array to count how many values are greater than 0
         self.n_smps = 0 # To keep track of how many total samples we've seen
 
     def injest(self, smp: np.ndarray):

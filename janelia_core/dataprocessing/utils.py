@@ -286,7 +286,7 @@ def write_planes_for_one_file(file: pathlib.Path, planes: np.ndarray, plane_dirs
 
     # Check if our files exist
     n_planes = len(planes)
-    existing_plane_files = np.empty(n_planes, np.bool)
+    existing_plane_files = np.empty(n_planes, bool)
     some_plane_files_exist = False
     all_plane_files_exist = True
     for i, plane_file_path in enumerate(plane_file_paths):
