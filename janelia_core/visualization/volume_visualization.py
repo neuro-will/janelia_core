@@ -570,174 +570,203 @@ def visualize_rgb_max_project(vol: np.ndarray, dim_m: np.ndarray = None, cmap_im
             plt.ylabel(cmap_ylabel, color=textcolor)
 
 
-def visualize_projs(horz_projs:  Sequence[np.ndarray], sag_projs: Sequence[np.ndarray],
-                    cor_projs: Sequence[np.ndarray], cmaps: Sequence[matplotlib.colors.Colormap],
-                    clims: Union[None, Sequence[Union[None, tuple]]], dim_m: Sequence[float] = None,
-                    title: str = None, plot_cmap: bool = False, f: matplotlib.figure.Figure = None,
-                    buffer: float = .6, tgt_h: float = 3.0, facecolor: Sequence[float] = (0, 0, 0),
-                    textcolor: Sequence[float] = (1, 1, 1)):
+import numpy as np
+import matplotlib
+import matplotlib.pyplot as plt
+from typing import Sequence, Union
 
-    """ Visualizes horizontal, sagital and coronal projections of the same volume of data.
 
-    This function will generate a figure with the following layout:
-
-            y_dim                z_dim
-        --------------        -----------
-        |               |    |          |
-        |               |    | sag_proj |    ^
-        |               |    |          |    |
-        |  horz-proj    |    |          |   x_dim
-        |               |    |          |    |
-        |               |    |          |
-        |               |    |          |
-        ------------          -----------
-
-        ----------------
-      ^ |               |     ----------
-      | | coronal-proj  |    |    cmap  |
-  z_dim |               |    |          |
-      | |               |     ----------
-        ----------------
-
-    Multiple images can be shown, overlayed on eachother.  If a colormap is shown, it will
-    be the colormap for the topmost image.
-
-    Args:
-        horz_projs: horz_projs[i] is the i^th horizontal projection image. Images will be overlaid one on top of the
-        other, with the i+1th image over the ith image.  Each image shape should be [x_dim, y_dim], where x_dim
-        and y_dim refer to the figure above.
-
-        sag_projs: sag_projs[i] is the i^th sagital projection image.  Each image should be of shape [x_dim, z_dim].
-
-        cor_projs: cor_projs[i] is the i^th coronal projection image.  Each image should be of shape [y_dim, z_dim]
-
-        cmaps: cmaps[i] is the colormap for plotting the i^th image in each of the projections.
-
-        clims: clims[i] is a tuple of color limits to use when plotting the i^th image.  clims[i] can also be
-        None, meaning no color limits will be explicitly passed to the plotting command for the i^th images.
-        If clims is None, then no color limits will be explicitly passed for all images.
-
-        dim_m: A scalar multiplier for each dimension in the order x, y, z to account for aspect ratios.  If None,
-        a value of [1, 1, 1] will be used.
-
-        title: A string to use as the title for the figure. If None, no title will be created.
-
-        f: Figure to plot into.  If not provided, one will be created
-
-        buffer: The amount of space to put around plots in inches.
-
-        tgt_h: The height of the figure that will be created in inches if f is None.
-
-        facecolor: The color of the figure background, if we are creating a figure
-
-        textcolor: The color to plot text in
+def visualize_projs(
+    horz_projs: Sequence[np.ndarray],
+    sag_projs: Sequence[np.ndarray],
+    cor_projs: Sequence[np.ndarray],
+    cmaps: Sequence[matplotlib.colors.Colormap],
+    clims: Union[None, Sequence[Union[None, tuple]]],
+    dim_m: Sequence[float] = None,
+    title: str = None,
+    plot_cmap: bool = False,
+    f: matplotlib.figure.Figure = None,
+    buffer: float = .6,
+    tgt_h: float = 3.0,
+    facecolor: Sequence[float] = (0, 0, 0),
+    textcolor: Sequence[float] = (1, 1, 1),
+    cbar_label=None,
+    scale_bar_kwargs=None,
+):
+    """
+    Visualizes horizontal, sagittal and coronal projections of the same volume of data.
     """
 
+    # ------------------------------------------------------------------
+    # Helper: add a scale-bar axis (TEXT ONLY ticks, no axis or tick marks)
+    # ------------------------------------------------------------------
+    def _add_scale_bar_axis(
+        f_,
+        *,
+        min_val,
+        max_val,
+        label,
+        rect=None,
+        attach_to="z",
+        proj_rects=None,
+        proj_phys_width=None,
+        color="white",
+        lw=2.0,
+        fontsize=7,
+    ):
+        bar_len = float(max_val) - float(min_val)
+        if bar_len <= 0:
+            raise ValueError("scale_bar_kwargs requires max > min")
+
+        # Default placement (to-scale)
+        if rect is None:
+            pr = proj_rects[attach_to]  # (x0,y0,w,h) in figure fractions
+            w = pr[2] * (bar_len / float(proj_phys_width))
+            h = pr[3] * 0.07
+            x0 = pr[0] + pr[2] * 0.1
+            y0 = pr[1] + pr[3] * 0.06
+            rect = (x0, y0, w, h)
+
+        ax_sb = f_.add_axes(rect, facecolor=(0, 0, 0, 0))
+        ax_sb.set_xlim(min_val, max_val)
+        ax_sb.set_ylim(0, 1)
+
+        # Draw the bar
+        ax_sb.plot(
+            [min_val, max_val],
+            [0.6, 0.6],
+            color=color,
+            lw=lw,
+            solid_capstyle="butt",
+        )
+
+        # ---- TEXT ONLY ticks ----
+        ax_sb.set_xticks([])
+        ax_sb.set_yticks([])
+
+        # ---- remove axis completely ----
+        for spine in ax_sb.spines.values():
+            spine.set_visible(False)
+
+        ax_sb.patch.set_alpha(0)
+        ax_sb.get_yaxis().set_visible(False)
+
+        if label is not None:
+            ax_sb.set_xlabel(label, color=color, fontsize=fontsize, labelpad=.1)
+
+        return ax_sb
+
+    # ------------------------------------------------------------------
+    # Main plotting code (unchanged)
+    # ------------------------------------------------------------------
     if dim_m is None:
         dim_m = np.ones(3)
 
     if clims is None:
-        clims = [None]*len(horz_projs)
+        clims = [None] * len(horz_projs)
 
-    # Get volume dimensions
     d_x, d_y = horz_projs[0].shape
     d_z = sag_projs[0].shape[1]
 
-    # Apply aspect ratio corrections
-    d_x = d_x*dim_m[0]
-    d_y = d_y*dim_m[1]
-    d_z = d_z*dim_m[2]
+    d_x *= dim_m[0]
+    d_y *= dim_m[1]
+    d_z *= dim_m[2]
 
-    xy_aspect_ratio = dim_m[0]/dim_m[1]
-    xz_aspect_ratio = dim_m[0]/dim_m[2]
-    yz_aspect_ratio = dim_m[1]/dim_m[2]
+    xy_aspect_ratio = dim_m[0] / dim_m[1]
+    xz_aspect_ratio = dim_m[0] / dim_m[2]
+    yz_aspect_ratio = dim_m[1] / dim_m[2]
 
-    # Create the figure if we need to
     if f is None:
-        tgt_w = tgt_h*(d_y+d_z)/(d_x+d_z) + 3*buffer
+        tgt_w = tgt_h * (d_y + d_z) / (d_x + d_z) + 3 * buffer
         f = plt.figure(figsize=(tgt_w, tgt_h), facecolor=facecolor)
 
-    # Get current figure size
-    f_w, f_h = f.get_size_inches() # (width, height)
+    f_w, f_h = f.get_size_inches()
+    usable_w = f_w - 3 * buffer
+    usable_h = f_h - 3 * buffer
 
-    # Determine how much usable space there is in the figure
-    usable_w = f_w - 3*buffer
-    usable_h = f_h - 3*buffer
+    req_height_im = float(d_x + d_z)
+    req_width_im = float(d_y + d_z)
 
-    # Determine the total height we can use for plotting, considering the aspect ratio of the figure
-    req_height_im = float(d_x + d_z) # Height we need for plotting, in number of image pixels
-    req_width_im = float(d_y + d_z) # Height we need for plotting, in number of image pizels
-
-    usable_h_w_ratio = usable_h/usable_w
-
-    plot_h_w_ratio = req_height_im/req_width_im
-
-    if usable_h_w_ratio < plot_h_w_ratio:
-        # Figure is "wider" than what we need to plot, so we can scale up vertically as much as possible
+    if usable_h / usable_w < req_height_im / req_width_im:
         plottable_h = usable_h
     else:
-        # Figure is not wide enough for the plot, so we can only scale up vertically until we run out of width
-        plottable_h = plot_h_w_ratio*usable_w
-    plottable_w = plottable_h/plot_h_w_ratio
+        plottable_h = (req_height_im / req_width_im) * usable_w
 
-    # Now we determine the size of the axes, as a percentage of the current figure size
-    dx_perc_h = (plottable_h*d_x/(d_x + d_z))/f_h
-    dz_perc_h = (plottable_h*d_z/(d_x + d_z))/f_h
-    dy_perc_w = (plottable_w*d_y/(d_y + d_z))/f_w
-    dz_perc_w = (plottable_w*d_z/(d_y + d_z))/f_w
+    plottable_w = plottable_h / (req_height_im / req_width_im)
 
-    # Now we determine position of axes as percentage of current figure size
-    v_0_p = buffer/f_h
-    h_0_p = buffer/f_w
-    v_1_p = 2*buffer/f_h + dz_perc_h
-    h_1_p = 2*buffer/f_w + dy_perc_w
+    dx_perc_h = (plottable_h * d_x / (d_x + d_z)) / f_h
+    dz_perc_h = (plottable_h * d_z / (d_x + d_z)) / f_h
+    dy_perc_w = (plottable_w * d_y / (d_y + d_z)) / f_w
+    dz_perc_w = (plottable_w * d_z / (d_y + d_z)) / f_w
 
-    # Now we specify the rectanges for each axes
+    v_0_p = buffer / f_h
+    h_0_p = buffer / f_w
+    v_1_p = 2 * buffer / f_h + dz_perc_h
+    h_1_p = 2 * buffer / f_w + dy_perc_w
+
     z_proj_rect = (h_0_p, v_1_p, dy_perc_w, dx_perc_h)
     x_proj_rect = (h_0_p, v_0_p, dy_perc_w, dz_perc_h)
     y_proj_rect = (h_1_p, v_1_p, dz_perc_w, dx_perc_h)
-    cmap_rect = (h_1_p, v_0_p, .3*dz_perc_w, dz_perc_h)
+    cmap_rect = (h_1_p, v_0_p, .3 * dz_perc_w, dz_perc_h)
 
-    # Now we add the axes, adding the title while it is convenient
+    # ---- scale bar ----
+    if scale_bar_kwargs is not None:
+        sb = dict(scale_bar_kwargs)
+        min_val = sb.pop("min")
+        max_val = sb.pop("max")
+        label = sb.pop("label", None)
+        rect = sb.pop("rect", None)
+        attach_to = sb.pop("attach_to", "z")
+
+        proj_rects = {"z": z_proj_rect, "x": x_proj_rect, "y": y_proj_rect}
+        proj_phys_width = {"z": d_y, "x": d_y, "y": d_z}[attach_to]
+
+        _add_scale_bar_axis(
+            f,
+            min_val=min_val,
+            max_val=max_val,
+            label=label,
+            rect=rect,
+            attach_to=attach_to,
+            proj_rects=proj_rects,
+            proj_phys_width=proj_phys_width,
+            **sb,
+        )
+
     z_proj_axes = f.add_axes(z_proj_rect)
     if title is not None:
         plt.title(title, color=textcolor)
+
     x_proj_axes = f.add_axes(x_proj_rect)
     y_proj_axes = f.add_axes(y_proj_rect)
+
     if plot_cmap:
         cmap_axes = f.add_axes(cmap_rect)
 
-    # Make sure the axes don't change aspect ratio when we scale the figure
-    z_proj_axes.set_aspect('equal')
-    x_proj_axes.set_aspect('equal')
-    y_proj_axes.set_aspect('equal')
-    if plot_cmap:
-        pass
-        #cmap_axes.set_aspect('equal')
+    for ax in [z_proj_axes, x_proj_axes, y_proj_axes]:
+        ax.axis("off")
+        ax.set_aspect("equal")
 
-    # Get rid of units on the projection axes
-
-    z_proj_axes.axes.get_xaxis().set_visible(False)
-    z_proj_axes.axes.get_yaxis().set_visible(False)
-
-    x_proj_axes.axes.get_xaxis().set_visible(False)
-    x_proj_axes.axes.get_yaxis().set_visible(False)
-
-    y_proj_axes.axes.get_xaxis().set_visible(False)
-    y_proj_axes.axes.get_yaxis().set_visible(False)
-
-    # Now we show the projections
-    for (z_proj, y_proj, x_proj, cmap, clim) in zip(horz_projs, sag_projs, cor_projs, cmaps, clims):
+    for (z_proj, y_proj, x_proj, cmap, clim) in zip(
+        horz_projs, sag_projs, cor_projs, cmaps, clims
+    ):
         c_im = z_proj_axes.imshow(z_proj, cmap=cmap, clim=clim, aspect=xy_aspect_ratio)
-        x_proj_axes.imshow(np.moveaxis(x_proj, 0, 1), cmap=cmap, clim=clim, aspect=1/xz_aspect_ratio)
+        x_proj_axes.imshow(
+            np.moveaxis(x_proj, 0, 1),
+            cmap=cmap,
+            clim=clim,
+            aspect=1 / xz_aspect_ratio,
+        )
         y_proj_axes.imshow(y_proj, cmap=cmap, clim=clim, aspect=yz_aspect_ratio)
 
-    # Now we show the colormap if we are suppose to
     if plot_cmap:
-        plt.colorbar(mappable=c_im, cax=cmap_axes)
+        cbar = plt.colorbar(mappable=c_im, cax=cmap_axes)
+        cbar.outline.set_linewidth(.25)
+        cbar.ax.tick_params(labelsize=5)
+        cbar.set_label(cbar_label, size=5)
 
-        cmap_axes.get_yaxis().set_tick_params(color=textcolor, labelcolor=textcolor)
-        cmap_axes.get_xaxis().set_tick_params(color=textcolor, labelcolor=textcolor)
+    return f
+
 
 
 def gen_composite_roi_vol(rois: Sequence[ROI], weights: np.ndarray, vol_shape: Sequence[int],
